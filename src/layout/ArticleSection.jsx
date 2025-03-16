@@ -9,8 +9,8 @@ import {
   
 function ArticleSection() {
   return (
-    <section className="article-section">
-     <div>
+    <section className="flex flex-row items-center justify-between p-3 bg-gray-200">
+     <div className="flex flex-row space-x-2 p-4 bg">
       <Button variant="default">Button</Button>
       <Button variant="default">Button</Button>
       <Button variant="default">Button</Button>
@@ -18,8 +18,8 @@ function ArticleSection() {
       </div>
       <div>
       <Select>
-  <SelectTrigger className="w-[180px]">
-    <SelectValue placeholder="Theme" />
+  <SelectTrigger className="w-[180px] bg-white">
+    <SelectValue placeholder="Hilight" />
   </SelectTrigger>
   <SelectContent>
     <SelectItem value="light">Light</SelectItem>
