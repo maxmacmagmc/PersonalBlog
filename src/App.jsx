@@ -13,10 +13,9 @@ function App() {
     <>
     <h1 className='text-5xl text-center p-18'>Vite react project with Tailwind css v4 and shadcn ui</h1>
     
-    <NavBar/>
-    <ArticleSection/>
+      <NavBar/>
       <HeroSection/>
-     
+      <ArticleSection/>
       <Footer/>
 
     </>
