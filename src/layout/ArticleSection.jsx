@@ -7,92 +7,124 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BlogCard } from "./BlogCard";
 import { Input } from "@/components/ui/input";
-import { blogPosts as allPosts } from "@/data/blogPosts";
+import { BlogCard } from "./BlogCard";
+import { blogPosts as initialPosts } from "@/data/blogPosts";
+
+const categories = ["Highlight", "Cat", "Inspiration", "General"];
+const sortOptions = ["likes", "date"];
 
 function ArticleSection() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortOption, setSortOption] = useState("Default");
-  const [filteredPosts, setFilteredPosts] = useState(allPosts);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("likes");
+  const [selectedCategory, setSelectedCategory] = useState("Highlight");
+  const [filteredPosts, setFilteredPosts] = useState([]);
+
+  // Load selected category from localStorage on first render
+  useEffect(() => {
+    const storedCategory = localStorage.getItem("selectedCategory");
+    if (storedCategory) {
+      setSelectedCategory(storedCategory);
+    }
+  }, []);
+
+  // Save selected category to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("selectedCategory", selectedCategory);
+  }, [selectedCategory]);
 
   useEffect(() => {
-    let filtered = [...allPosts];
+    let filtered = initialPosts.filter((post) =>
+      selectedCategory === "Highlight" ? true : post.category === selectedCategory
+    );
 
-    // Filter by category
-    if (selectedCategory !== "All") {
-      filtered = filtered.filter((post) => post.category === selectedCategory);
-    }
-
-    // Filter by search keyword
-    if (searchTerm.trim() !== "") {
+    if (searchQuery.trim() !== "") {
       filtered = filtered.filter((post) =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase())
+        post.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Sort by selected option
-    if (sortOption === "Most Liked") {
+    if (sortBy === "likes") {
       filtered.sort((a, b) => b.likes - a.likes);
-    } else if (sortOption === "Newest") {
-      filtered.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
+    } else if (sortBy === "date") {
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
 
     setFilteredPosts(filtered);
-  }, [searchTerm, selectedCategory, sortOption]);
+  }, [searchQuery, selectedCategory, sortBy]);
 
   return (
     <>
-      <section className="flex flex-col md:flex-row items-center justify-between p-3 bg-gray-200 gap-4">
-        <div className="flex flex-row flex-wrap gap-2">
-          {["All", "Highlight", "Cat", "Inspiration", "General"].map((category) => (
+      {/* Filter bar */}
+      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 bg-gray-100">
+        {/* Filter buttons (Desktop only) */}
+        <div className="hidden md:flex flex-wrap gap-2">
+          {categories.map((category) => (
             <Button
               key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
+              variant="outline"
+              className={`${
+                selectedCategory === category
+                  ? "bg-gray-800 text-white"
+                  : "hover:bg-gray-200"
+              }`}
               onClick={() => setSelectedCategory(category)}
+              disabled={selectedCategory === category}
             >
               {category}
             </Button>
           ))}
         </div>
 
-        <div className="flex flex-row space-x-2 p-2">
+        {/* Search and Sort (All screens) */}
+        <div className="flex flex-col md:flex-row gap-2 md:items-center md:ml-auto w-full md:w-auto">
           <Input
             placeholder="Search articles..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-white"
+            className="w-full md:w-64"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-
-
-          <Select onValueChange={(val) => setSortOption(val)} defaultValue="Default">
-            <SelectTrigger className="w-[140px] bg-white">
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full md:w-[160px] bg-white">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Default">Default</SelectItem>
-              <SelectItem value="Most Liked">Most Liked</SelectItem>
-              <SelectItem value="Newest">Newest</SelectItem>
+              <SelectItem value="likes">Sort by Likes</SelectItem>
+              <SelectItem value="date">Sort by Date</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Category Dropdown (Mobile only) */}
+        <div className="flex md:hidden">
+          <Select
+            value={selectedCategory}
+            onValueChange={(val) => setSelectedCategory(val)}
+          >
+            <SelectTrigger className="w-full bg-white mt-2">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </section>
 
+      {/* Articles */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-8">
-        {filteredPosts.length > 0 ? (
-          filteredPosts.map((post) => (
-            <BlogCard
-              key={post.id}
-              {...post}
-              authorImage="https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449784/my-blog-post/xgfy0xnvyemkklcqodkg.jpg"
-            />
-          ))
-        ) : (
-          <p className="text-center col-span-2 text-gray-500">No articles found.</p>
-        )}
+        {filteredPosts.map((post) => (
+          <BlogCard
+            key={post.id}
+            {...post}
+            authorImage="https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449784/my-blog-post/xgfy0xnvyemkklcqodkg.jpg"
+            showContent={true}
+          />
+        ))}
       </div>
     </>
   );
