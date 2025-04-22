@@ -1,210 +1,134 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { BlogCard } from "./BlogCard";
+import ArticleCard from "./ArticleCard";
+import { format } from "date-fns";
+import { Search } from "lucide-react";
 
-const categories = ["Highlight", "Cat", "Inspiration", "General"];
-const sortOptions = ["likes", "date"];
-const BASE_URL = "https://blog-post-project-api.vercel.app/posts";
+const API_URL = "https://blog-post-project-api.vercel.app/posts";
 
-function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function ArticleSection() {
-  const [initialPosts, setInitialPosts] = useState([]);
-  const [filteredPosts, setFilteredPosts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Highlight");
-  const [sortBy, setSortBy] = useState("likes");
+const ArticleSection = () => {
+  const [articles, setArticles] = useState([]);
+  const [category, setCategory] = useState("Highlight");
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
-  // Reset posts when category or search changes
-  useEffect(() => {
-    localStorage.setItem("selectedCategory", selectedCategory);
-    setInitialPosts([]); // Reset posts on category or search change
-    setPage(1);
-    setHasMore(true);
-  }, [selectedCategory, searchQuery]);
-
-  // Fetch posts from API
-  useEffect(() => {
-    fetchPosts(page);
-  }, [page, selectedCategory, searchQuery]);
-
-  const fetchPosts = async (pageNum) => {
-    setIsLoading(true);
+  const fetchArticles = async (reset = false) => {
+    setLoading(true);
     try {
-      const res = await axios.get(BASE_URL, {
+      const res = await axios.get(API_URL, {
         params: {
-          page: pageNum,
+          page,
           limit: 6,
+          category: category !== "Highlight" ? category : undefined,
+          keyword: search || undefined,
         },
       });
-      const newPosts = res.data.posts.map((post) => ({
+
+      const fetched = res.data.posts.map((post) => ({
         ...post,
-        date: formatDate(post.date),
+        dateFormatted: format(new Date(post.date), "dd MMMM yyyy"),
       }));
-      setInitialPosts((prev) => [...prev, ...newPosts]); // Append new posts to the existing ones
-      setHasMore(res.data.nextPage !== null); // Check if there are more posts
-    } catch (err) {
-      console.error("Error fetching posts:", err);
+
+      setArticles((prev) => (reset ? fetched : [...prev, ...fetched]));
+      setTotalPages(res.data.totalPages);
+    } catch (error) {
+      console.error("Error fetching articles", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Filter, sort, search logic
   useEffect(() => {
-    let filtered;
+    setPage(1);
+    fetchArticles(true);
+  }, [category, search]);
 
-    if (selectedCategory === "Highlight") {
-      const seenTitles = new Set();
-      filtered = initialPosts.filter((post) => {
-        if (seenTitles.has(post.title)) return false;
-        seenTitles.add(post.title);
-        return true;
-      });
-    } else {
-      filtered = initialPosts.filter(
-        (post) => post.category === selectedCategory
-      );
-    }
+  useEffect(() => {
+    if (page !== 1) fetchArticles();
+  }, [page]);
 
-    if (searchQuery.trim() !== "") {
-      filtered = filtered.filter((post) =>
-        post.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (sortBy === "likes") {
-      filtered.sort((a, b) => b.likes - a.likes);
-    } else if (sortBy === "date") {
-      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-
-    setFilteredPosts(filtered);
-  }, [searchQuery, selectedCategory, sortBy, initialPosts]);
-
-  const handleLoadMore = () => {
-    if (hasMore) setPage((prev) => prev + 1); // Load next page
+  const handleViewMore = () => {
+    setPage((prev) => prev + 1);
   };
 
-  const renderSkeletons = (count = 6) => {
-    return Array.from({ length: count }).map((_, i) => (
-      <div
-        key={i}
-        className="animate-pulse space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md"
-      >
-        <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-        <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-full" />
-      </div>
-    ));
+  const handleCategoryChange = (newCategory) => {
+    setCategory(newCategory);
+  };
+
+  const handleSearch = () => {
+    setPage(1);
+    fetchArticles(true);
   };
 
   return (
-    <>
-      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 bg-gray-100 dark:bg-gray-800">
-        <div className="hidden md:flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              variant="outline"
-              className={`${
-                selectedCategory === category
-                  ? "bg-gray-800 text-white dark:bg-white dark:text-black"
-                  : "hover:bg-gray-200 dark:hover:bg-gray-700"
+    <section className="max-w-7xl mx-auto px-4 py-10">
+      {/* Category and Search */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        {/* Category Buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {["Highlight", "Cat", "Inspiration", "General"].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => handleCategoryChange(cat)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                category === cat
+                  ? "bg-gray-900 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
-              onClick={() => setSelectedCategory(category)}
-              disabled={selectedCategory === category}
             >
-              {category}
-            </Button>
+              {cat}
+            </button>
           ))}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-2 md:items-center w-full md:w-auto">
-          <Input
-            placeholder="Search articles..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full md:w-64"
+        {/* Search Box */}
+        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-3 py-2 bg-white w-full md:w-80">
+          <Search className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search"
+            className="outline-none w-full text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full md:w-[160px] bg-white dark:bg-gray-900 dark:text-white">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="likes">Sort by Likes</SelectItem>
-              <SelectItem value="date">Sort by Date</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex md:hidden">
-          <Select
-            value={selectedCategory}
-            onValueChange={(val) => setSelectedCategory(val)}
+          <button
+            onClick={handleSearch}
+            className="text-sm font-medium text-gray-600 hover:text-gray-800"
           >
-            <SelectTrigger className="w-full bg-white dark:bg-gray-900 dark:text-white mt-2">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            Go
+          </button>
         </div>
-      </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-8">
-        {isLoading && initialPosts.length === 0 ? (
-          renderSkeletons(6)
-        ) : filteredPosts.length > 0 ? (
-          filteredPosts.map((post) => (
-            <BlogCard
-              key={post.id}
-              {...post}
-              showContent={true}
-              authorImage="https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449784/my-blog-post/xgfy0xnvyemkklcqodkg.jpg"
-            />
-          ))
-        ) : (
-          <p className="text-center w-full col-span-2 text-gray-500 dark:text-gray-300">
-            No articles found.
-          </p>
-        )}
       </div>
 
-      {hasMore && (
-        <div className="flex justify-center pb-8">
-          <Button onClick={handleLoadMore} disabled={isLoading}>
-            {isLoading ? "Loading..." : "View More"}
-          </Button>
+      {/* Article Grid */}
+      {articles.length === 0 && !loading && (
+        <p className="text-center text-gray-500">No articles found.</p>
+      )}
+
+<div className="grid gap-8 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2">
+
+        {articles.map((post) => (
+          <ArticleCard key={post.id} post={post} />
+        ))}
+      </div>
+
+      {/* Loading & View More */}
+      {loading && <p className="text-center mt-6 text-gray-500">Loading...</p>}
+
+      {!loading && page < totalPages && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={handleViewMore}
+            className="bg-gray-900 text-white px-6 py-2 rounded-md hover:bg-gray-700"
+          >
+            View More
+          </button>
         </div>
       )}
-    </>
+    </section>
   );
-}
+};
 
-export { ArticleSection };
+export default ArticleSection;
