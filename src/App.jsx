@@ -10,6 +10,7 @@ import  LoginPage  from './pages/LoginPage';
 import  AdminPage  from './pages/AdminDashboard';
 import SignupPage from './pages/SignupPage';
 import LandingPage from './pages/LandingPage';
+import ProfilesPage from './pages/ProfilesPage';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState("Highlight");
@@ -29,6 +30,7 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/post/:id" element={<PostDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
+        <Route path="/profiles" element={<ProfilesPage />} />
       </Routes>
       <Footer />
     </Router>
