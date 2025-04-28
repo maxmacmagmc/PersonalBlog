@@ -5,7 +5,7 @@ import LoginPage from '../pages/LoginPage';
 import AdminDashboard from '../pages/AdminDashboard';
 import NotFoundPage from '../pages/NotFoundPage';
 import PostDetailPage from '../pages/PostDetailPage';
-
+import ProfilesPage from "@/pages/ProfilesPage"; 
 const Router = () => {
   return (
     <BrowserRouter>
@@ -15,6 +15,8 @@ const Router = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="*" element={<NotFoundPage />} />
+        <Route path="/profiles" element={<ProfilesPage />} />
+
       </Routes>
     </BrowserRouter>
   );
